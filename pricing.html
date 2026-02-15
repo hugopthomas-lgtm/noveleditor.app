@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Novel Editor Pro - Pricing</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 900px;
+            width: 100%;
+            text-align: center;
+        }
+        .back-link {
+            display: inline-block;
+            color: #a78bfa;
+            text-decoration: none;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+        .back-link:hover {
+            color: #c4b5fd;
+        }
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 12px;
+            background: linear-gradient(90deg, #a78bfa, #c4b5fd);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .subtitle {
+            font-size: 1.2rem;
+            color: #a0a0a0;
+            margin-bottom: 50px;
+        }
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 50px;
+        }
+        @media (max-width: 600px) {
+            .pricing-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .plan-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 36px 28px;
+            text-align: left;
+            position: relative;
+        }
+        .plan-card.featured {
+            border-color: #a78bfa;
+            background: rgba(167, 139, 250, 0.08);
+        }
+        .plan-badge {
+            position: absolute;
+            top: -12px;
+            right: 20px;
+            background: linear-gradient(135deg, #a78bfa 0%, #c084fc 100%);
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 14px;
+            border-radius: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .plan-name {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .plan-price {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+        .plan-price span {
+            font-size: 1rem;
+            font-weight: 400;
+            color: #a0a0a0;
+        }
+        .plan-annual {
+            font-size: 13px;
+            color: #a78bfa;
+            margin-bottom: 20px;
+        }
+        .plan-features {
+            list-style: none;
+            margin-bottom: 28px;
+        }
+        .plan-features li {
+            padding: 8px 0;
+            font-size: 14px;
+            color: #ccc;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .plan-features li::before {
+            content: '✓';
+            color: #a78bfa;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .plan-features li.disabled {
+            color: #666;
+        }
+        .plan-features li.disabled::before {
+            content: '—';
+            color: #444;
+        }
+        .plan-btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            text-decoration: none;
+        }
+        .plan-btn.primary {
+            background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
+            color: white;
+        }
+        .plan-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(167, 139, 250, 0.3);
+        }
+        .plan-btn.secondary {
+            background: rgba(255,255,255,0.08);
+            color: #ccc;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+        .plan-btn.secondary:hover {
+            background: rgba(255,255,255,0.12);
+        }
+        .faq {
+            text-align: left;
+            max-width: 600px;
+            margin: 0 auto 40px;
+        }
+        .faq h2 {
+            font-size: 1.5rem;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+        .faq-item {
+            margin-bottom: 20px;
+        }
+        .faq-item h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #e0e0e0;
+        }
+        .faq-item p {
+            font-size: 13px;
+            color: #a0a0a0;
+            line-height: 1.6;
+        }
+        .footer {
+            font-size: 12px;
+            color: #666;
+            margin-top: 20px;
+        }
+        .footer a {
+            color: #a78bfa;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">&larr; Back to Novel Editor</a>
+
+        <h1>AI helps you find your voice.</h1>
+        <p class="subtitle">Unlock the full power of your AI writing assistant.</p>
+
+        <div class="pricing-grid">
+            <!-- Free Plan -->
+            <div class="plan-card">
+                <div class="plan-name">Free</div>
+                <div class="plan-price">$0</div>
+                <div class="plan-annual">&nbsp;</div>
+                <ul class="plan-features">
+                    <li>Manuscript formatting & navigation</li>
+                    <li>Chapter detection & word count</li>
+                    <li>Character management</li>
+                    <li>PDF export</li>
+                    <li>Pomodoro timer</li>
+                    <li>10 AI suggestions per day</li>
+                    <li>Style profile analysis</li>
+                    <li class="disabled">Style-aware AI suggestions</li>
+                    <li class="disabled">Unlimited AI usage</li>
+                    <li class="disabled">Book preview & sharing</li>
+                </ul>
+                <a href="https://workspace.google.com/marketplace/app/novel_editor/..." class="plan-btn secondary">Install Free</a>
+            </div>
+
+            <!-- Pro Plan -->
+            <div class="plan-card featured">
+                <div class="plan-badge">Most Popular</div>
+                <div class="plan-name">Pro</div>
+                <div class="plan-price">$9.99 <span>/ month</span></div>
+                <div class="plan-annual">or $7.99/month billed annually ($95.88/year)</div>
+                <ul class="plan-features">
+                    <li>Everything in Free</li>
+                    <li>Unlimited AI suggestions</li>
+                    <li>Style-aware synonyms & reformulations</li>
+                    <li>Tone adjustment & expand/condense</li>
+                    <li>Full grammar & style correction</li>
+                    <li>AI chat about your manuscript</li>
+                    <li>Multiple style profiles</li>
+                    <li>Manuscript consistency checking</li>
+                    <li>Unlimited book previews</li>
+                    <li>Shareable preview links</li>
+                </ul>
+                <button class="plan-btn primary" onclick="subscribe('monthly')">Get Pro — $9.99/month</button>
+            </div>
+        </div>
+
+        <div class="faq">
+            <h2>Frequently Asked Questions</h2>
+
+            <div class="faq-item">
+                <h3>Which AI model powers Novel Editor?</h3>
+                <p>Novel Editor is powered by Claude, Anthropic's AI. It excels at creative writing, understanding nuance, and matching your unique style.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>Can I try it before paying?</h3>
+                <p>Yes! The free tier includes 10 AI suggestions per day. You can analyze your writing style for free — that's how you'll see how well the AI understands your voice.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>What languages are supported?</h3>
+                <p>English, French, Spanish, Italian, German, and Portuguese — for both the interface and the AI's ability to work with your manuscript.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>Will the AI change my writing style?</h3>
+                <p>Never. Novel Editor learns your unique voice and all suggestions respect your style. It helps you find your voice, not replace it.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>Can I cancel anytime?</h3>
+                <p>Yes, cancel anytime from your Stripe billing portal. Your style profiles and data remain accessible, but AI features revert to the free tier.</p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a> · <a href="support.html">Support</a>
+        </div>
+    </div>
+
+    <script>
+        function subscribe(plan) {
+            // Get user's email from URL params (passed from the add-on)
+            var params = new URLSearchParams(window.location.search);
+            var email = params.get('email') || '';
+
+            if (!email) {
+                alert('Please open this page from the Novel Editor sidebar to link your account.');
+                return;
+            }
+
+            // Call backend to create Stripe checkout session
+            fetch('https://novel-editor-server.up.railway.app/api/subscription/create-checkout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + (params.get('key') || '')
+                },
+                body: JSON.stringify({
+                    userEmail: email,
+                    priceId: plan === 'annual' ? 'price_annual_id_here' : 'price_monthly_id_here',
+                    successUrl: window.location.origin + '/pricing.html?success=true',
+                    cancelUrl: window.location.origin + '/pricing.html'
+                })
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.url) {
+                    window.location.href = data.url;
+                } else {
+                    alert('Could not start checkout. Please try again.');
+                }
+            })
+            .catch(function() {
+                alert('Connection error. Please try again.');
+            });
+        }
+
+        // Show success message if redirected back from Stripe
+        if (window.location.search.includes('success=true')) {
+            document.querySelector('.subtitle').textContent = 'Welcome to Pro! You can now return to Google Docs and enjoy unlimited AI features.';
+            document.querySelector('.subtitle').style.color = '#34c759';
+        }
+    </script>
+</body>
+</html>

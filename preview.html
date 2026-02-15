@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Novel Editor - Book Preview</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Georgia, 'Times New Roman', serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: #333;
+        }
+
+        .loading {
+            color: #a0a0a0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 16px;
+            text-align: center;
+        }
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(167, 139, 250, 0.2);
+            border-top-color: #a78bfa;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .error {
+            color: #ff453a;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 14px;
+            text-align: center;
+            max-width: 400px;
+        }
+
+        /* Book Container */
+        .book-container {
+            perspective: 1200px;
+            display: none;
+        }
+        .book-container.visible { display: block; }
+
+        .book {
+            width: 420px;
+            max-width: 90vw;
+            background: #faf8f5;
+            border-radius: 0 8px 8px 0;
+            box-shadow:
+                -6px 0 20px rgba(0,0,0,0.3),
+                0 0 40px rgba(0,0,0,0.2),
+                inset 2px 0 4px rgba(0,0,0,0.05);
+            position: relative;
+            min-height: 560px;
+            overflow: hidden;
+        }
+
+        /* Book spine effect */
+        .book::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 20px;
+            background: linear-gradient(90deg,
+                rgba(0,0,0,0.15) 0%,
+                rgba(0,0,0,0.05) 40%,
+                transparent 100%
+            );
+            z-index: 2;
+        }
+
+        /* Page */
+        .page {
+            padding: 48px 36px 48px 46px;
+            min-height: 560px;
+            display: none;
+            animation: pageIn 0.4s ease;
+        }
+        .page.active { display: block; }
+
+        @keyframes pageIn {
+            from { opacity: 0; transform: translateX(10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Title page */
+        .page-title {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            min-height: 500px;
+        }
+        .book-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-bottom: 12px;
+            line-height: 1.3;
+        }
+        .book-subtitle {
+            font-size: 14px;
+            color: #888;
+            font-style: italic;
+        }
+
+        /* Chapter page */
+        .chapter-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-bottom: 24px;
+            text-align: center;
+            padding-top: 60px;
+        }
+        .chapter-text {
+            font-size: 14px;
+            line-height: 1.85;
+            color: #2c2c2c;
+            text-align: justify;
+            hyphens: auto;
+        }
+        .chapter-text p {
+            text-indent: 24px;
+            margin-bottom: 4px;
+        }
+        .chapter-text p:first-child { text-indent: 0; }
+
+        /* Page number */
+        .page-number {
+            position: absolute;
+            bottom: 16px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 11px;
+            color: #aaa;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        /* Navigation */
+        .nav-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            margin-top: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        .nav-btn {
+            padding: 8px 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.05);
+            color: #ccc;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+        .nav-btn:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        .nav-btn:disabled {
+            opacity: 0.3;
+            cursor: default;
+        }
+        .nav-info {
+            color: #888;
+            font-size: 12px;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        /* Banner */
+        .banner {
+            margin-top: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 11px;
+            color: #666;
+        }
+        .banner a {
+            color: #a78bfa;
+            text-decoration: none;
+        }
+        .banner a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<div class="loading" id="loading">
+    <div class="loading-spinner"></div>
+    Loading your book preview...
+</div>
+
+<div class="error" id="error" style="display:none;"></div>
+
+<div class="book-container" id="book-container">
+    <div class="book" id="book">
+        <!-- Pages rendered by JS -->
+    </div>
+</div>
+
+<div class="nav-bar" id="nav-bar" style="display:none;">
+    <button class="nav-btn" id="btn-prev" onclick="prevPage()">Previous</button>
+    <span class="nav-info" id="nav-info">1 / 1</span>
+    <button class="nav-btn" id="btn-next" onclick="nextPage()">Next</button>
+</div>
+
+<div class="banner" id="banner" style="display:none;">
+    Made with <a href="https://workspace.google.com/marketplace/app/novel_editor/" target="_blank">Novel Editor</a>
+</div>
+
+<script>
+var pages = [];
+var currentPage = 0;
+var MAX_CHARS_PER_PAGE = 1800;
+
+function init() {
+    var params = new URLSearchParams(window.location.search);
+    var token = params.get('t');
+
+    if (!token) {
+        showError('No preview token provided.');
+        return;
+    }
+
+    // Fetch preview from API
+    var apiBase = getApiBase();
+    fetch(apiBase + '/api/preview/view/' + token)
+        .then(function(res) {
+            if (!res.ok) throw new Error('Preview not found');
+            return res.json();
+        })
+        .then(function(data) {
+            if (data.content) {
+                var content = typeof data.content === 'string' ? JSON.parse(data.content) : data.content;
+                buildPages(content);
+                renderPage(0);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('book-container').classList.add('visible');
+                document.getElementById('nav-bar').style.display = 'flex';
+                document.getElementById('banner').style.display = 'block';
+            } else {
+                showError('This preview is no longer available.');
+            }
+        })
+        .catch(function(err) {
+            showError('Could not load preview. The link may have expired.');
+        });
+}
+
+function getApiBase() {
+    // In production, use the Railway backend URL
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:3000';
+    }
+    return 'https://novel-editor-server.up.railway.app';
+}
+
+function buildPages(content) {
+    // Title page
+    pages.push({
+        type: 'title',
+        title: content.title || 'Untitled'
+    });
+
+    // Chapter pages
+    if (content.chapters) {
+        for (var i = 0; i < content.chapters.length; i++) {
+            var chapter = content.chapters[i];
+            var fullText = chapter.content.join('\n');
+
+            // Split into pages if too long
+            var chunks = splitIntoPages(fullText, MAX_CHARS_PER_PAGE);
+            for (var j = 0; j < chunks.length; j++) {
+                pages.push({
+                    type: 'chapter',
+                    title: j === 0 ? chapter.title : null,
+                    text: chunks[j]
+                });
+            }
+        }
+    }
+}
+
+function splitIntoPages(text, maxChars) {
+    if (text.length <= maxChars) return [text];
+
+    var chunks = [];
+    var paragraphs = text.split('\n');
+    var current = '';
+
+    for (var i = 0; i < paragraphs.length; i++) {
+        var p = paragraphs[i];
+        if (current.length + p.length + 1 > maxChars && current.length > 0) {
+            chunks.push(current);
+            current = p;
+        } else {
+            current += (current ? '\n' : '') + p;
+        }
+    }
+    if (current) chunks.push(current);
+    return chunks;
+}
+
+function renderPage(index) {
+    currentPage = index;
+    var book = document.getElementById('book');
+    var page = pages[index];
+
+    var html = '<div class="page active">';
+
+    if (page.type === 'title') {
+        html += '<div class="page-title">';
+        html += '<div class="book-title">' + escapeHtml(page.title) + '</div>';
+        html += '<div class="book-subtitle">A Novel</div>';
+        html += '</div>';
+    } else {
+        if (page.title) {
+            html += '<div class="chapter-title">' + escapeHtml(page.title) + '</div>';
+        }
+        html += '<div class="chapter-text">';
+        var paragraphs = page.text.split('\n');
+        for (var i = 0; i < paragraphs.length; i++) {
+            if (paragraphs[i].trim()) {
+                html += '<p>' + escapeHtml(paragraphs[i]) + '</p>';
+            }
+        }
+        html += '</div>';
+    }
+
+    html += '<div class="page-number">' + (index + 1) + '</div>';
+    html += '</div>';
+
+    book.innerHTML = html;
+
+    // Update nav
+    document.getElementById('nav-info').textContent = (index + 1) + ' / ' + pages.length;
+    document.getElementById('btn-prev').disabled = (index === 0);
+    document.getElementById('btn-next').disabled = (index >= pages.length - 1);
+}
+
+function nextPage() {
+    if (currentPage < pages.length - 1) {
+        renderPage(currentPage + 1);
+    }
+}
+
+function prevPage() {
+    if (currentPage > 0) {
+        renderPage(currentPage - 1);
+    }
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function showError(msg) {
+    document.getElementById('loading').style.display = 'none';
+    var el = document.getElementById('error');
+    el.textContent = msg;
+    el.style.display = 'block';
+}
+
+// Keyboard navigation
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowRight' || e.key === ' ') {
+        e.preventDefault();
+        nextPage();
+    } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        prevPage();
+    }
+});
+
+init();
+</script>
+</body>
+</html>
