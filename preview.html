@@ -4,10 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Novel Editor - Book Preview</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: Georgia, 'Times New Roman', serif;
+            font-family: 'EB Garamond', Georgia, serif;
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
             min-height: 100vh;
             display: flex;
@@ -15,7 +18,8 @@
             align-items: center;
             justify-content: center;
             padding: 20px;
-            color: #333;
+            color: #2a2522;
+            overflow-x: hidden;
         }
 
         .loading {
@@ -43,135 +47,116 @@
             max-width: 400px;
         }
 
-        /* Open Book Container */
-        .book-container {
-            perspective: 1800px;
+        /* Book wrapper */
+        #book-container {
             display: none;
         }
-        .book-container.visible { display: block; }
-
-        .book {
-            display: flex;
-            position: relative;
-            transform: rotateY(-2deg);
-            transform-style: preserve-3d;
+        #book-container.visible {
+            display: block;
         }
 
-        /* Shared page styles */
-        .page-left, .page-right {
-            width: 340px;
-            height: 500px;
-            background: #faf8f5;
-            position: relative;
+        /* Page styling */
+        .page {
+            background: #faf6f0;
             overflow: hidden;
-        }
-
-        @media (max-width: 750px) {
-            .page-left, .page-right { width: 280px; height: 420px; }
-            .page-content { padding: 32px 28px 40px !important; }
-            .chapter-title { font-size: 17px !important; padding-top: 40px !important; }
-        }
-        @media (max-width: 600px) {
-            .page-left { display: none; }
-            .page-right { border-radius: 4px; }
-            .book { transform: none; }
-            .spine { display: none; }
-        }
-
-        /* Left page — verso */
-        .page-left {
-            border-radius: 8px 0 0 8px;
-            box-shadow:
-                -8px 4px 25px rgba(0,0,0,0.35),
-                inset -2px 0 8px rgba(0,0,0,0.06);
-        }
-
-        /* Right page — recto */
-        .page-right {
-            border-radius: 0 8px 8px 0;
-            box-shadow:
-                8px 4px 25px rgba(0,0,0,0.35),
-                inset 2px 0 8px rgba(0,0,0,0.06);
-        }
-
-        /* Center spine */
-        .spine {
-            width: 12px;
-            background: linear-gradient(90deg,
-                rgba(0,0,0,0.12) 0%,
-                rgba(0,0,0,0.03) 30%,
-                rgba(0,0,0,0.0) 50%,
-                rgba(0,0,0,0.03) 70%,
-                rgba(0,0,0,0.12) 100%
-            );
             position: relative;
-            z-index: 3;
-            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        }
+        .page.hard {
+            background: #faf6f0;
         }
 
-        /* Paper texture via subtle gradient */
-        .page-left::before, .page-right::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background:
-                radial-gradient(ellipse at 20% 50%, rgba(255,248,240,0.4), transparent 70%),
-                radial-gradient(ellipse at 80% 50%, rgba(245,235,220,0.2), transparent 60%);
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        /* Curved edge shadow — left page right edge */
-        .page-left::after {
-            content: '';
-            position: absolute;
-            right: 0;
-            top: 0;
-            bottom: 0;
-            width: 30px;
-            background: linear-gradient(270deg,
-                rgba(0,0,0,0.08) 0%,
-                rgba(0,0,0,0.02) 50%,
-                transparent 100%
-            );
-            z-index: 2;
-        }
-
-        /* Curved edge shadow — right page left edge */
-        .page-right::after {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 30px;
-            background: linear-gradient(90deg,
-                rgba(0,0,0,0.08) 0%,
-                rgba(0,0,0,0.02) 50%,
-                transparent 100%
-            );
-            z-index: 2;
-        }
-
-        /* Page content */
-        .page-content {
-            padding: 40px 34px 48px 38px;
+        .page-inner {
+            padding: 40px 36px 48px;
             height: 100%;
             display: flex;
             flex-direction: column;
-            position: relative;
-            z-index: 2;
-        }
-        .page-right .page-content {
-            padding-left: 38px;
-            padding-right: 34px;
-        }
-        .page-empty {
-            height: 100%;
+            font-family: 'EB Garamond', Georgia, serif;
         }
 
-        /* Title page */
-        .page-title-content {
+        /* Cover page — Gallimard inspired */
+        .cover-page {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            height: 100%;
+            padding: 40px 30px;
+            position: relative;
+        }
+        .cover-border {
+            position: absolute;
+            inset: 12px;
+            border: 2px solid #c0392b;
+            pointer-events: none;
+        }
+        .cover-border-inner {
+            position: absolute;
+            inset: 16px;
+            border: 1px solid #2a2522;
+            pointer-events: none;
+        }
+        .cover-author {
+            font-size: 14px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #2a2522;
+            margin-bottom: 24px;
+            font-weight: 400;
+        }
+        .cover-title {
+            font-size: 28px;
+            font-weight: 600;
+            color: #2a2522;
+            line-height: 1.3;
+            letter-spacing: 1px;
+            font-variant: small-caps;
+            margin-bottom: 16px;
+        }
+        .cover-ornament {
+            color: #c0392b;
+            font-size: 20px;
+            letter-spacing: 6px;
+            margin: 12px 0;
+        }
+        .cover-subtitle {
+            font-size: 13px;
+            color: #666;
+            font-style: italic;
+            letter-spacing: 1px;
+        }
+        .cover-imprint {
+            position: absolute;
+            bottom: 30px;
+            font-size: 10px;
+            letter-spacing: 3px;
+            color: #999;
+            text-transform: uppercase;
+        }
+
+        /* Back cover */
+        .back-cover {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            height: 100%;
+            padding: 40px 30px;
+            position: relative;
+        }
+        .back-cover-text {
+            font-size: 11px;
+            color: #999;
+            letter-spacing: 1px;
+        }
+        .back-cover-text a {
+            color: #a78bfa;
+            text-decoration: none;
+        }
+
+        /* Title page (interior) */
+        .title-page {
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -179,62 +164,113 @@
             text-align: center;
             height: 100%;
         }
-        .book-title {
-            font-size: 26px;
-            font-weight: 700;
-            color: #1a1a2e;
-            margin-bottom: 14px;
-            line-height: 1.3;
-            letter-spacing: 0.5px;
+        .title-page-ornament {
+            color: #ccc;
+            font-size: 16px;
+            letter-spacing: 8px;
+            margin: 16px 0;
         }
-        .book-subtitle {
+        .title-page-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #2a2522;
+            line-height: 1.3;
+            margin-bottom: 8px;
+        }
+        .title-page-subtitle {
             font-size: 13px;
             color: #999;
             font-style: italic;
-            letter-spacing: 1px;
-        }
-        .book-ornament {
-            margin: 20px 0;
-            color: #ccc;
-            font-size: 18px;
-            letter-spacing: 8px;
         }
 
-        /* Chapter page */
+        /* Chapter content */
         .chapter-title {
-            font-size: 19px;
-            font-weight: 700;
-            color: #1a1a2e;
+            font-size: 18px;
+            font-weight: 600;
+            color: #2a2522;
             margin-bottom: 20px;
             text-align: center;
-            padding-top: 50px;
+            padding-top: 40px;
             letter-spacing: 0.5px;
+            font-variant: small-caps;
         }
         .chapter-text {
-            font-size: 12.5px;
-            line-height: 1.9;
-            color: #2c2c2c;
+            font-size: 13.5px;
+            line-height: 1.5;
+            color: #2a2522;
             text-align: justify;
             hyphens: auto;
             flex: 1;
+            orphans: 2;
+            widows: 2;
         }
         .chapter-text p {
-            text-indent: 20px;
-            margin-bottom: 2px;
+            text-indent: 1.5em;
+            margin-bottom: 0;
         }
-        .chapter-text p:first-child { text-indent: 0; }
+        .chapter-text p:first-child {
+            text-indent: 0;
+        }
+        .chapter-text p.first-para::first-letter {
+            float: left;
+            font-size: 3.2em;
+            line-height: 0.8;
+            padding-right: 4px;
+            padding-top: 4px;
+            color: #2a2522;
+            font-weight: 600;
+        }
+        .chapter-text .scene-break {
+            text-align: center;
+            text-indent: 0;
+            padding: 8px 0;
+            color: #999;
+            letter-spacing: 6px;
+        }
 
         /* Page number */
         .page-number {
-            text-align: center;
-            font-size: 10px;
+            font-size: 11px;
             color: #bbb;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-style: italic;
             margin-top: auto;
             padding-top: 12px;
         }
-        .page-left .page-number { text-align: left; }
-        .page-right .page-number { text-align: right; }
+        .page-number.left { text-align: left; }
+        .page-number.right { text-align: right; }
+
+        /* Toolbar */
+        .toolbar {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            display: flex;
+            gap: 8px;
+            z-index: 1000;
+        }
+        .toolbar-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.08);
+            color: #bbb;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(8px);
+        }
+        .toolbar-btn:hover {
+            background: rgba(255,255,255,0.15);
+            color: white;
+        }
+        .toolbar-btn.active {
+            background: rgba(167, 139, 250, 0.3);
+            color: #a78bfa;
+        }
 
         /* Navigation */
         .nav-bar {
@@ -242,7 +278,7 @@
             align-items: center;
             justify-content: center;
             gap: 24px;
-            margin-top: 24px;
+            margin-top: 20px;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
         .nav-btn {
@@ -272,21 +308,26 @@
             text-align: center;
         }
 
-        /* Page flip animation */
-        @keyframes flipRight {
-            from { opacity: 0; transform: translateX(20px); }
-            to { opacity: 1; transform: translateX(0); }
+        /* Progress bar */
+        .progress-bar-container {
+            width: 100%;
+            max-width: 500px;
+            height: 3px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            margin-top: 12px;
+            overflow: hidden;
         }
-        @keyframes flipLeft {
-            from { opacity: 0; transform: translateX(-20px); }
-            to { opacity: 1; transform: translateX(0); }
+        .progress-bar-fill {
+            height: 100%;
+            background: #a78bfa;
+            border-radius: 2px;
+            transition: width 0.3s ease;
         }
-        .flip-right { animation: flipRight 0.35s ease; }
-        .flip-left { animation: flipLeft 0.35s ease; }
 
         /* Banner */
         .banner {
-            margin-top: 20px;
+            margin-top: 16px;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             font-size: 11px;
             color: #555;
@@ -296,6 +337,11 @@
             text-decoration: none;
         }
         .banner a:hover { text-decoration: underline; }
+
+        /* StPageFlip overrides */
+        .stf__parent {
+            box-shadow: 0 10px 60px rgba(0,0,0,0.5);
+        }
     </style>
 </head>
 <body>
@@ -307,30 +353,38 @@
 
 <div class="error" id="error" style="display:none;"></div>
 
-<div class="book-container" id="book-container">
-    <div class="book" id="book">
-        <div class="page-left" id="page-left"></div>
-        <div class="spine"></div>
-        <div class="page-right" id="page-right"></div>
-    </div>
+<div id="book-container">
+    <div id="book"></div>
+</div>
+
+<div class="toolbar" id="toolbar" style="display:none;">
+    <button class="toolbar-btn" id="btn-sound" onclick="toggleSound()" title="Toggle sound">&#128264;</button>
+    <button class="toolbar-btn" id="btn-fullscreen" onclick="toggleFullscreen()" title="Fullscreen">&#x26F6;</button>
 </div>
 
 <div class="nav-bar" id="nav-bar" style="display:none;">
-    <button class="nav-btn" id="btn-prev" onclick="prevSpread()">&larr; Previous</button>
+    <button class="nav-btn" id="btn-prev" onclick="flipPrev()">&larr; Previous</button>
     <span class="nav-info" id="nav-info">1 / 1</span>
-    <button class="nav-btn" id="btn-next" onclick="nextSpread()">Next &rarr;</button>
+    <button class="nav-btn" id="btn-next" onclick="flipNext()">Next &rarr;</button>
+</div>
+
+<div class="progress-bar-container" id="progress-bar" style="display:none;">
+    <div class="progress-bar-fill" id="progress-fill" style="width:0%;"></div>
 </div>
 
 <div class="banner" id="banner" style="display:none;">
-    Made with <a href="https://workspace.google.com/marketplace/app/novel_editor/" target="_blank">Novel Editor</a>
+    Made with <a href="https://noveleditor.app" target="_blank">Novel Editor</a>
 </div>
 
 <script>
+var pageFlip = null;
 var pages = [];
-var currentSpread = 0;
-var totalSpreads = 0;
-var MAX_CHARS_PER_PAGE = 1200;
-var flipDirection = 'right';
+var soundEnabled = true;
+var MAX_CHARS_PER_PAGE = 1100;
+
+// Base64 page turn sound (tiny click/swoosh)
+var pageSoundData = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7v/////////////////////////////////////////////////////////////////////////////////////AAAABUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//tQAAAAdAAAAEgAAAAAAAAANIAAAAAExBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==';
+var pageSound = new Audio(pageSoundData);
 
 function init() {
     var params = new URLSearchParams(window.location.search);
@@ -351,17 +405,18 @@ function init() {
             if (data.content) {
                 var content = typeof data.content === 'string' ? JSON.parse(data.content) : data.content;
                 buildPages(content);
-                totalSpreads = Math.ceil(pages.length / 2);
-                renderSpread(0);
+                createBook();
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('book-container').classList.add('visible');
                 document.getElementById('nav-bar').style.display = 'flex';
+                document.getElementById('toolbar').style.display = 'flex';
+                document.getElementById('progress-bar').style.display = 'block';
                 document.getElementById('banner').style.display = 'block';
             } else {
                 showError('This preview is no longer available.');
             }
         })
-        .catch(function(err) {
+        .catch(function() {
             showError('Could not load preview. The link may have expired.');
         });
 }
@@ -374,12 +429,14 @@ function getApiBase() {
 }
 
 function buildPages(content) {
-    // Title page (always right side, left blank)
+    var title = content.title || 'Untitled';
+
+    // Cover page (hard)
+    pages.push({ type: 'cover', title: title, hard: true });
+
+    // Blank + Title page
     pages.push({ type: 'blank' });
-    pages.push({
-        type: 'title',
-        title: content.title || 'Untitled'
-    });
+    pages.push({ type: 'title', title: title });
 
     // Chapter pages
     if (content.chapters) {
@@ -391,25 +448,25 @@ function buildPages(content) {
                 pages.push({
                     type: 'chapter',
                     title: j === 0 ? chapter.title : null,
-                    text: chunks[j]
+                    text: chunks[j],
+                    isFirstPage: j === 0
                 });
             }
         }
     }
 
-    // Ensure even number of pages
+    // Ensure even number + back cover
     if (pages.length % 2 !== 0) {
         pages.push({ type: 'blank' });
     }
+    pages.push({ type: 'back', hard: true });
 }
 
 function splitIntoPages(text, maxChars) {
     if (text.length <= maxChars) return [text];
-
     var chunks = [];
     var paragraphs = text.split('\n');
     var current = '';
-
     for (var i = 0; i < paragraphs.length; i++) {
         var p = paragraphs[i];
         if (current.length + p.length + 1 > maxChars && current.length > 0) {
@@ -423,73 +480,144 @@ function splitIntoPages(text, maxChars) {
     return chunks;
 }
 
-function renderSpread(spread) {
-    currentSpread = spread;
-    var leftIdx = spread * 2;
-    var rightIdx = spread * 2 + 1;
+function renderPage(page, pageIndex) {
+    var div = document.createElement('div');
+    div.className = 'page' + (page.hard ? ' hard' : '');
 
-    var leftPage = pages[leftIdx] || { type: 'blank' };
-    var rightPage = pages[rightIdx] || { type: 'blank' };
-
-    var leftEl = document.getElementById('page-left');
-    var rightEl = document.getElementById('page-right');
-
-    leftEl.className = 'page-left ' + (flipDirection === 'right' ? 'flip-right' : 'flip-left');
-    rightEl.className = 'page-right ' + (flipDirection === 'right' ? 'flip-right' : 'flip-left');
-
-    leftEl.innerHTML = renderPageContent(leftPage, leftIdx + 1, 'left');
-    rightEl.innerHTML = renderPageContent(rightPage, rightIdx + 1, 'right');
-
-    // Update nav
-    document.getElementById('nav-info').textContent = (leftIdx + 1) + '-' + Math.min(rightIdx + 1, pages.length) + ' / ' + pages.length;
-    document.getElementById('btn-prev').disabled = (spread === 0);
-    document.getElementById('btn-next').disabled = (spread >= totalSpreads - 1);
-}
-
-function renderPageContent(page, pageNum, side) {
-    if (page.type === 'blank') {
-        return '<div class="page-content"><div class="page-empty"></div></div>';
-    }
-
-    var html = '<div class="page-content">';
-
-    if (page.type === 'title') {
-        html += '<div class="page-title-content">';
-        html += '<div class="book-ornament">&#10045; &#10045; &#10045;</div>';
-        html += '<div class="book-title">' + escapeHtml(page.title) + '</div>';
-        html += '<div class="book-ornament">&#8212;</div>';
-        html += '<div class="book-subtitle">A Novel</div>';
-        html += '</div>';
+    if (page.type === 'cover') {
+        div.innerHTML =
+            '<div class="cover-page">' +
+            '<div class="cover-border"></div>' +
+            '<div class="cover-border-inner"></div>' +
+            '<div class="cover-author">&nbsp;</div>' +
+            '<div class="cover-ornament">&#8212;</div>' +
+            '<div class="cover-title">' + escapeHtml(page.title) + '</div>' +
+            '<div class="cover-ornament">&#8212;</div>' +
+            '<div class="cover-subtitle">A Novel</div>' +
+            '<div class="cover-imprint">NOVEL EDITOR</div>' +
+            '</div>';
+    } else if (page.type === 'back') {
+        div.innerHTML =
+            '<div class="back-cover">' +
+            '<div class="cover-border"></div>' +
+            '<div class="cover-border-inner"></div>' +
+            '<div class="back-cover-text">Made with <a href="https://noveleditor.app" target="_blank">Novel Editor</a></div>' +
+            '</div>';
+    } else if (page.type === 'title') {
+        div.innerHTML =
+            '<div class="page-inner"><div class="title-page">' +
+            '<div class="title-page-ornament">&#10045; &#10045; &#10045;</div>' +
+            '<div class="title-page-title">' + escapeHtml(page.title) + '</div>' +
+            '<div class="title-page-ornament">&#8212;</div>' +
+            '<div class="title-page-subtitle">A Novel</div>' +
+            '</div></div>';
+    } else if (page.type === 'blank') {
+        div.innerHTML = '<div class="page-inner"></div>';
     } else {
+        var html = '<div class="page-inner">';
         if (page.title) {
             html += '<div class="chapter-title">' + escapeHtml(page.title) + '</div>';
         }
         html += '<div class="chapter-text">';
         var paragraphs = page.text.split('\n');
         for (var i = 0; i < paragraphs.length; i++) {
-            if (paragraphs[i].trim()) {
-                html += '<p>' + escapeHtml(paragraphs[i]) + '</p>';
+            var p = paragraphs[i].trim();
+            if (!p) continue;
+            // Scene break detection
+            if (/^[\*\-]{3,}$/.test(p) || p === '***' || p === '---') {
+                html += '<p class="scene-break">&middot; &middot; &middot;</p>';
+            } else {
+                var cls = (page.isFirstPage && i === 0) ? ' class="first-para"' : '';
+                html += '<p' + cls + '>' + escapeHtml(p) + '</p>';
             }
         }
         html += '</div>';
-        html += '<div class="page-number">' + pageNum + '</div>';
+
+        // Page numbers (not on cover/title/first chapter page)
+        if (!page.title) {
+            var side = (pageIndex % 2 === 0) ? 'left' : 'right';
+            html += '<div class="page-number ' + side + '">' + (pageIndex) + '</div>';
+        }
+
+        html += '</div>';
+        div.innerHTML = html;
     }
 
-    html += '</div>';
-    return html;
+    return div;
 }
 
-function nextSpread() {
-    if (currentSpread < totalSpreads - 1) {
-        flipDirection = 'right';
-        renderSpread(currentSpread + 1);
+function createBook() {
+    var container = document.getElementById('book');
+    var isMobile = window.innerWidth < 600;
+    var pageWidth = isMobile ? Math.min(window.innerWidth - 40, 340) : 340;
+    var pageHeight = isMobile ? Math.round(pageWidth * 1.47) : 500;
+
+    pageFlip = new St.PageFlip(container, {
+        width: pageWidth,
+        height: pageHeight,
+        showCover: true,
+        mobileScrollSupport: false,
+        flippingTime: 800,
+        usePortrait: isMobile,
+        startZIndex: 10,
+        maxShadowOpacity: 0.5,
+        showPageCorners: true,
+        disableFlipByClick: false
+    });
+
+    // Build DOM pages
+    var domPages = [];
+    for (var i = 0; i < pages.length; i++) {
+        domPages.push(renderPage(pages[i], i));
     }
+
+    pageFlip.loadFromHTML(domPages);
+
+    // Events
+    pageFlip.on('flip', function(e) {
+        if (soundEnabled) {
+            pageSound.currentTime = 0;
+            pageSound.play().catch(function() {});
+        }
+        updateNav();
+    });
+
+    updateNav();
 }
 
-function prevSpread() {
-    if (currentSpread > 0) {
-        flipDirection = 'left';
-        renderSpread(currentSpread - 1);
+function updateNav() {
+    if (!pageFlip) return;
+    var current = pageFlip.getCurrentPageIndex();
+    var total = pageFlip.getPageCount();
+    document.getElementById('nav-info').textContent = (current + 1) + ' / ' + total;
+    document.getElementById('btn-prev').disabled = (current === 0);
+    document.getElementById('btn-next').disabled = (current >= total - 1);
+
+    // Progress bar
+    var progress = total > 1 ? ((current) / (total - 1)) * 100 : 0;
+    document.getElementById('progress-fill').style.width = progress + '%';
+}
+
+function flipNext() {
+    if (pageFlip) pageFlip.flipNext();
+}
+
+function flipPrev() {
+    if (pageFlip) pageFlip.flipPrev();
+}
+
+function toggleSound() {
+    soundEnabled = !soundEnabled;
+    var btn = document.getElementById('btn-sound');
+    btn.textContent = soundEnabled ? '\uD83D\uDD0A' : '\uD83D\uDD07';
+    btn.classList.toggle('active', !soundEnabled);
+}
+
+function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(function() {});
+    } else {
+        document.exitFullscreen();
     }
 }
 
@@ -509,10 +637,10 @@ function showError(msg) {
 document.addEventListener('keydown', function(e) {
     if (e.key === 'ArrowRight' || e.key === ' ') {
         e.preventDefault();
-        nextSpread();
+        flipNext();
     } else if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        prevSpread();
+        flipPrev();
     }
 });
 
