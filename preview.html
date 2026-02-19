@@ -66,13 +66,8 @@
             background: #faf6f0;
         }
 
-        /* Hide page underneath during flip */
-        .stf__parent .stf__block {
-            background: #faf6f0;
-        }
-
         .page-inner {
-            padding: 40px 36px 36px;
+            padding: 40px 36px 48px;
             height: 100%;
             display: flex;
             flex-direction: column;
@@ -210,6 +205,8 @@
             flex: 1;
             orphans: 2;
             widows: 2;
+            overflow: hidden;
+            margin-bottom: 8px;
         }
         .chapter-text p {
             text-indent: 1.5em;
@@ -241,7 +238,8 @@
             color: #bbb;
             font-style: italic;
             margin-top: auto;
-            padding-top: 12px;
+            padding-top: 16px;
+            flex-shrink: 0;
         }
         .page-number.left { text-align: left; }
         .page-number.right { text-align: right; }
@@ -368,10 +366,14 @@
         /* StPageFlip overrides */
         .stf__parent {
             box-shadow: 0 10px 60px rgba(0,0,0,0.5);
+            overflow: hidden;
+            clip-path: inset(0);
         }
-        .stf__parent .--simple .stf__block,
-        .stf__parent .stf__item {
+        .stf__parent .stf__item,
+        .stf__parent .--soft,
+        .stf__parent .--hard {
             background: #faf6f0;
+            backface-visibility: hidden;
         }
     </style>
 </head>
@@ -415,26 +417,29 @@ var pages = [];
 var soundEnabled = true;
 var MAX_CHARS_PER_PAGE = 1100;
 
-// Page turn sound using Web Audio API (white noise burst shaped like paper swoosh)
+// Page turn sound using Web Audio API
 var audioCtx = null;
 function playPageSound() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    var duration = 0.15;
+    var duration = 0.3;
     var sampleRate = audioCtx.sampleRate;
     var length = sampleRate * duration;
     var buffer = audioCtx.createBuffer(1, length, sampleRate);
     var data = buffer.getChannelData(0);
     for (var i = 0; i < length; i++) {
         var t = i / length;
-        var env = Math.sin(t * Math.PI) * 0.3;
-        data[i] = (Math.random() * 2 - 1) * env;
+        var envelope = Math.exp(-2.5 * t) * Math.sin(t * Math.PI * 0.8);
+        var freq = 400 - (200 * t);
+        var phase = 2 * Math.PI * freq * (i / sampleRate);
+        var sine = Math.sin(phase);
+        var noise = (Math.random() * 2 - 1) * 0.4;
+        data[i] = (sine * 0.6 + noise * 0.4) * envelope * 0.4;
     }
     var source = audioCtx.createBufferSource();
     source.buffer = buffer;
     var filter = audioCtx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.value = 3000;
-    filter.Q.value = 0.5;
+    filter.type = 'highpass';
+    filter.frequency.value = 800;
     source.connect(filter);
     filter.connect(audioCtx.destination);
     source.start();
@@ -627,11 +632,13 @@ function createBook() {
 
     pageFlip.loadFromHTML(domPages);
 
-    // Events
-    pageFlip.on('flip', function(e) {
-        if (soundEnabled) {
+    // Events — sound on flip START, nav update on flip END
+    pageFlip.on('changeState', function(e) {
+        if (e.data === 'flipping' && soundEnabled) {
             try { playPageSound(); } catch(err) {}
         }
+    });
+    pageFlip.on('flip', function(e) {
         updateNav();
     });
 
