@@ -50,6 +50,7 @@
         /* Book wrapper */
         #book-container {
             display: none;
+            position: relative;
         }
         #book-container.visible {
             display: block;
@@ -370,23 +371,22 @@
             clip-path: inset(0);
             position: relative;
         }
-        /* Book spine shadow */
-        .stf__parent::after {
-            content: '';
+        /* Book spine shadow (overlay div, outside clip-path) */
+        .book-spine-shadow {
             position: absolute;
             top: 0;
             bottom: 0;
             left: 50%;
             transform: translateX(-50%);
-            width: 40px;
+            width: 50px;
             background: linear-gradient(to right,
-                rgba(0,0,0,0.15) 0%,
-                rgba(0,0,0,0.06) 15%,
-                rgba(0,0,0,0) 30%,
-                rgba(0,0,0,0.02) 50%,
-                rgba(0,0,0,0) 70%,
-                rgba(0,0,0,0.06) 85%,
-                rgba(0,0,0,0.15) 100%
+                rgba(0,0,0,0.18) 0%,
+                rgba(0,0,0,0.08) 20%,
+                rgba(0,0,0,0) 35%,
+                rgba(0,0,0,0.03) 50%,
+                rgba(0,0,0,0) 65%,
+                rgba(0,0,0,0.08) 80%,
+                rgba(0,0,0,0.18) 100%
             );
             z-index: 100;
             pointer-events: none;
@@ -437,7 +437,7 @@
 var pageFlip = null;
 var pages = [];
 var soundEnabled = true;
-var MAX_CHARS_PER_PAGE = 1100;
+var MAX_CHARS_PER_PAGE = 850;
 
 // Page turn sound using Web Audio API
 var audioCtx = null;
@@ -665,6 +665,11 @@ function createBook() {
     });
 
     updateNav();
+
+    // Add spine shadow overlay on top of the book
+    var spine = document.createElement('div');
+    spine.className = 'book-spine-shadow';
+    document.getElementById('book-container').appendChild(spine);
 }
 
 function updateNav() {
