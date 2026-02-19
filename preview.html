@@ -436,34 +436,51 @@
 var pageFlip = null;
 var pages = [];
 var soundEnabled = true;
-var MAX_CHARS_PER_PAGE = 850;
+var MAX_CHARS_PER_PAGE = 650;
 
-// Page turn sound using Web Audio API
+// Page turn sound — realistic paper swoosh via Web Audio API
 var audioCtx = null;
 function playPageSound() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    var duration = 0.3;
-    var sampleRate = audioCtx.sampleRate;
-    var length = sampleRate * duration;
-    var buffer = audioCtx.createBuffer(1, length, sampleRate);
-    var data = buffer.getChannelData(0);
-    for (var i = 0; i < length; i++) {
-        var t = i / length;
-        var envelope = Math.exp(-2.5 * t) * Math.sin(t * Math.PI * 0.8);
-        var freq = 400 - (200 * t);
-        var phase = 2 * Math.PI * freq * (i / sampleRate);
-        var sine = Math.sin(phase);
-        var noise = (Math.random() * 2 - 1) * 0.4;
-        data[i] = (sine * 0.6 + noise * 0.4) * envelope * 0.4;
+    var sr = audioCtx.sampleRate;
+    var dur = 0.45;
+    var len = Math.floor(sr * dur);
+    var buf = audioCtx.createBuffer(1, len, sr);
+    var d = buf.getChannelData(0);
+
+    // Two-phase sound: quick "lift" then longer "swoosh-settle"
+    for (var i = 0; i < len; i++) {
+        var t = i / len;
+        // Phase 1: sharp attack (0-15%) — paper lifting
+        // Phase 2: swoosh body (15-60%) — page turning
+        // Phase 3: soft settle (60-100%) — page landing
+        var env;
+        if (t < 0.15) {
+            env = (t / 0.15) * 0.8;
+        } else if (t < 0.6) {
+            env = 0.8 * Math.exp(-1.5 * (t - 0.15));
+        } else {
+            env = 0.8 * Math.exp(-1.5 * 0.45) * Math.exp(-6 * (t - 0.6));
+        }
+        // Filtered noise — brown-ish noise (accumulated random)
+        var white = Math.random() * 2 - 1;
+        if (i > 0) d[i] = (d[i - 1] + (0.02 * white)) / 1.02;
+        else d[i] = white * 0.02;
+        d[i] = d[i] * env * 12;
     }
-    var source = audioCtx.createBufferSource();
-    source.buffer = buffer;
-    var filter = audioCtx.createBiquadFilter();
-    filter.type = 'highpass';
-    filter.frequency.value = 800;
-    source.connect(filter);
-    filter.connect(audioCtx.destination);
-    source.start();
+    var src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    // Bandpass to keep only papery frequencies
+    var bp = audioCtx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 2200;
+    bp.Q.value = 0.4;
+    var gain = audioCtx.createGain();
+    gain.gain.value = 0.6;
+    src.connect(bp);
+    bp.connect(gain);
+    gain.connect(audioCtx.destination);
+    src.start();
 }
 
 function init() {
