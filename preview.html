@@ -60,17 +60,24 @@
             background: #faf6f0;
             overflow: hidden;
             position: relative;
+            box-shadow: none;
         }
         .page.hard {
             background: #faf6f0;
         }
 
+        /* Hide page underneath during flip */
+        .stf__parent .stf__block {
+            background: #faf6f0;
+        }
+
         .page-inner {
-            padding: 40px 36px 48px;
+            padding: 40px 36px 36px;
             height: 100%;
             display: flex;
             flex-direction: column;
             font-family: 'EB Garamond', Georgia, serif;
+            overflow: hidden;
         }
 
         /* Cover page — Gallimard inspired */
@@ -338,9 +345,33 @@
         }
         .banner a:hover { text-decoration: underline; }
 
+        /* Share toast */
+        .share-toast {
+            position: fixed;
+            bottom: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 13px;
+            z-index: 2000;
+            transition: bottom 0.3s ease;
+            backdrop-filter: blur(8px);
+        }
+        .share-toast.visible {
+            bottom: 24px;
+        }
+
         /* StPageFlip overrides */
         .stf__parent {
             box-shadow: 0 10px 60px rgba(0,0,0,0.5);
+        }
+        .stf__parent .--simple .stf__block,
+        .stf__parent .stf__item {
+            background: #faf6f0;
         }
     </style>
 </head>
@@ -358,9 +389,11 @@
 </div>
 
 <div class="toolbar" id="toolbar" style="display:none;">
+    <button class="toolbar-btn" id="btn-share" onclick="shareLink()" title="Share">&#128279;</button>
     <button class="toolbar-btn" id="btn-sound" onclick="toggleSound()" title="Toggle sound">&#128264;</button>
     <button class="toolbar-btn" id="btn-fullscreen" onclick="toggleFullscreen()" title="Fullscreen">&#x26F6;</button>
 </div>
+<div class="share-toast" id="share-toast">Link copied!</div>
 
 <div class="nav-bar" id="nav-bar" style="display:none;">
     <button class="nav-btn" id="btn-prev" onclick="flipPrev()">&larr; Previous</button>
@@ -382,9 +415,30 @@ var pages = [];
 var soundEnabled = true;
 var MAX_CHARS_PER_PAGE = 1100;
 
-// Base64 page turn sound (tiny click/swoosh)
-var pageSoundData = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7v/////////////////////////////////////////////////////////////////////////////////////AAAABUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//tQAAAAdAAAAEgAAAAAAAAANIAAAAAExBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==';
-var pageSound = new Audio(pageSoundData);
+// Page turn sound using Web Audio API (white noise burst shaped like paper swoosh)
+var audioCtx = null;
+function playPageSound() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    var duration = 0.15;
+    var sampleRate = audioCtx.sampleRate;
+    var length = sampleRate * duration;
+    var buffer = audioCtx.createBuffer(1, length, sampleRate);
+    var data = buffer.getChannelData(0);
+    for (var i = 0; i < length; i++) {
+        var t = i / length;
+        var env = Math.sin(t * Math.PI) * 0.3;
+        data[i] = (Math.random() * 2 - 1) * env;
+    }
+    var source = audioCtx.createBufferSource();
+    source.buffer = buffer;
+    var filter = audioCtx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 3000;
+    filter.Q.value = 0.5;
+    source.connect(filter);
+    filter.connect(audioCtx.destination);
+    source.start();
+}
 
 function init() {
     var params = new URLSearchParams(window.location.search);
@@ -576,8 +630,7 @@ function createBook() {
     // Events
     pageFlip.on('flip', function(e) {
         if (soundEnabled) {
-            pageSound.currentTime = 0;
-            pageSound.play().catch(function() {});
+            try { playPageSound(); } catch(err) {}
         }
         updateNav();
     });
@@ -631,6 +684,19 @@ function showError(msg) {
     var el = document.getElementById('error');
     el.textContent = msg;
     el.style.display = 'block';
+}
+
+function shareLink() {
+    var url = window.location.href;
+    if (navigator.share) {
+        navigator.share({ title: document.title, url: url }).catch(function() {});
+    } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(function() {
+            var toast = document.getElementById('share-toast');
+            toast.classList.add('visible');
+            setTimeout(function() { toast.classList.remove('visible'); }, 2000);
+        });
+    }
 }
 
 // Keyboard navigation
