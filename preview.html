@@ -6,8 +6,7 @@
     <title>Novel Editor - Book Preview</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-    <script>window.PagedConfig = { auto: false };</script>
-    <script src="https://unpkg.com/pagedjs@0.4.3/dist/paged.polyfill.js"></script>
+    <script src="https://unpkg.com/pagedjs@0.4.3/dist/paged.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -515,30 +514,23 @@ async function paginateWithPagedJS(content) {
     document.head.appendChild(styleEl);
 
     // Run Paged.js Previewer
-    var Previewer = (window.Paged && window.Paged.Previewer) || window.PagedPolyfill;
-    var paged;
+    try {
+        var PM = window.PagedModule || window.Paged || {};
+        var Previewer = PM.Previewer;
+        if (!Previewer) throw new Error('Paged.js Previewer not found (globals: PagedModule=' + !!window.PagedModule + ', Paged=' + !!window.Paged + ')');
 
-    if (Previewer && Previewer.prototype) {
-        paged = new Previewer();
-    } else if (window.PagedPolyfill && window.PagedPolyfill.preview) {
-        // Direct polyfill mode
-        await window.PagedPolyfill.preview();
+        var paged = new Previewer();
+        var flow = await paged.preview(renderTarget.innerHTML, [{ text: PAGED_CSS }], renderTarget);
+        console.log('Paged.js rendered', flow.total, 'pages');
         afterPagedRendered(title, renderTarget);
         document.head.removeChild(styleEl);
         return;
-    }
-
-    if (paged) {
-        await paged.preview(renderTarget.innerHTML, [PAGED_CSS], renderTarget);
-        afterPagedRendered(title, renderTarget);
+    } catch (err) {
+        console.warn('Paged.js failed, using fallback:', err);
         document.head.removeChild(styleEl);
-        return;
+        renderTarget.innerHTML = '';
+        fallbackPaginate(content, title);
     }
-
-    // Fallback: if Paged.js didn't load, use manual pagination
-    console.warn('Paged.js not available, using fallback pagination');
-    document.head.removeChild(styleEl);
-    fallbackPaginate(content, title);
 }
 
 function afterPagedRendered(title, renderTarget) {
