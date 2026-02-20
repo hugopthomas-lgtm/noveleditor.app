@@ -223,8 +223,8 @@
             <div class="plan-card featured">
                 <div class="plan-badge">Early Bird</div>
                 <div class="plan-name">Pro</div>
-                <div class="plan-price"><s style="font-size:1.5rem;color:#666;font-weight:400;">$7</s> $4 <span>/ month</span></div>
-                <div class="plan-annual">Billed annually ($48/year)</div>
+                <div class="plan-price">€4 <span>/ month</span></div>
+                <div class="plan-annual">Cancel anytime</div>
                 <ul class="plan-features">
                     <li>Everything in Free</li>
                     <li><strong>Unlimited</strong> AI suggestions</li>
@@ -235,7 +235,7 @@
                     <li>Multiple style profiles</li>
                     <li>Shareable preview links</li>
                 </ul>
-                <button class="plan-btn primary" onclick="subscribe()">Get Pro &mdash; $4/month</button>
+                <button class="plan-btn primary" onclick="subscribe()">Get Pro &mdash; €4/month</button>
             </div>
         </div>
 
@@ -253,11 +253,6 @@
             </div>
 
             <div class="faq-item">
-                <h3>Why annual billing only?</h3>
-                <p>Writing is a long game. Annual billing lets us keep the price at $4/month and invest in building the best writing tools possible.</p>
-            </div>
-
-            <div class="faq-item">
                 <h3>What languages are supported?</h3>
                 <p>English, French, Spanish, Italian, German, and Portuguese &mdash; for both the interface and the AI's ability to work with your manuscript.</p>
             </div>
@@ -269,7 +264,7 @@
 
             <div class="faq-item">
                 <h3>Can I cancel anytime?</h3>
-                <p>Yes, cancel anytime from your billing portal. You keep Pro access until the end of your billing period. After that, AI features revert to 10/day.</p>
+                <p>Yes, cancel anytime from your billing portal. You keep Pro access until the end of your current month. After that, AI features revert to 10/day.</p>
             </div>
         </div>
 
@@ -279,8 +274,8 @@
     </div>
 
     <script>
-        // TODO: Replace with real Stripe price ID (annual plan only)
-        var PRICE_ID = 'price_1T2a1xIo301M25CQM117bwSQ';
+        // Monthly €4 plan
+        var PRICE_ID = 'price_1T2yXBIo301M25CQ2ywi6hS0';
 
         function subscribe() {
             var params = new URLSearchParams(window.location.search);
