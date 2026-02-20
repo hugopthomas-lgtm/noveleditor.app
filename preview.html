@@ -5,10 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Novel Editor - Book Preview</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <script>window.PagedConfig = { auto: false };</script>
+    <script src="https://unpkg.com/pagedjs@0.4.3/dist/paged.polyfill.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
             font-family: 'EB Garamond', Georgia, serif;
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
@@ -20,8 +23,12 @@
             padding: 20px;
             color: #2a2522;
             overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
         }
 
+        /* ===== LOADING ===== */
         .loading {
             color: #a0a0a0;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -29,262 +36,247 @@
             text-align: center;
         }
         .loading-spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid rgba(167, 139, 250, 0.2);
+            width: 40px; height: 40px;
+            border: 3px solid rgba(167,139,250,0.2);
             border-top-color: #a78bfa;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
             margin: 0 auto 16px;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-step {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #777;
+            transition: opacity 0.3s;
+        }
 
         .error {
             color: #ff453a;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            font-size: 14px;
-            text-align: center;
-            max-width: 400px;
+            font-size: 14px; text-align: center; max-width: 400px;
         }
 
-        /* Book wrapper */
+        /* ===== PAGED.JS RENDER (hidden off-screen) ===== */
+        #paged-render {
+            position: absolute;
+            left: -99999px;
+            top: 0;
+            visibility: hidden;
+            z-index: -1;
+        }
+
+        /* ===== BOOK CONTAINER ===== */
         #book-container {
             display: none;
             position: relative;
         }
-        #book-container.visible {
-            display: block;
-        }
+        #book-container.visible { display: block; }
 
-        /* Page styling */
+        /* ===== PAGE STYLING ===== */
         .page {
             background: #faf6f0;
             overflow: hidden;
             position: relative;
-            box-shadow: none;
         }
-        .page.hard {
-            background: #faf6f0;
+        .page.hard { background: #faf6f0; }
+
+        /* Page edge effect — subtle shadow on inner edge */
+        .page::after {
+            content: '';
+            position: absolute;
+            top: 0; bottom: 0;
+            width: 20px;
+            pointer-events: none;
+            z-index: 5;
+        }
+        .page.page-recto::after {
+            left: 0;
+            background: linear-gradient(to right, rgba(0,0,0,0.06), transparent);
+        }
+        .page.page-verso::after {
+            right: 0;
+            background: linear-gradient(to left, rgba(0,0,0,0.06), transparent);
         }
 
         .page-inner {
-            padding: 40px 36px 48px;
+            padding: 48px 38px 58px 48px;
             height: 100%;
             display: flex;
             flex-direction: column;
             font-family: 'EB Garamond', Georgia, serif;
             overflow: hidden;
         }
+        .page-inner.recto { padding: 48px 48px 58px 38px; }
 
-        /* Cover page — Gallimard inspired */
+        /* ===== COVER — Gallimard inspired ===== */
         .cover-page {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            height: 100%;
-            padding: 40px 30px;
-            position: relative;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            text-align: center; height: 100%;
+            padding: 40px 30px; position: relative;
         }
         .cover-border {
-            position: absolute;
-            inset: 12px;
-            border: 2px solid #c0392b;
-            pointer-events: none;
+            position: absolute; inset: 12px;
+            border: 2px solid #c0392b; pointer-events: none;
         }
         .cover-border-inner {
-            position: absolute;
-            inset: 16px;
-            border: 1px solid #2a2522;
-            pointer-events: none;
+            position: absolute; inset: 16px;
+            border: 1px solid #2a2522; pointer-events: none;
         }
         .cover-author {
-            font-size: 14px;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            color: #2a2522;
-            margin-bottom: 24px;
-            font-weight: 400;
+            font-size: 14px; letter-spacing: 2px;
+            text-transform: uppercase; color: #2a2522;
+            margin-bottom: 24px; font-weight: 400;
         }
         .cover-title {
-            font-size: 28px;
-            font-weight: 600;
-            color: #2a2522;
-            line-height: 1.3;
-            letter-spacing: 1px;
-            font-variant: small-caps;
-            margin-bottom: 16px;
+            font-size: 28px; font-weight: 600; color: #2a2522;
+            line-height: 1.3; letter-spacing: 1px;
+            font-variant: small-caps; margin-bottom: 16px;
         }
         .cover-ornament {
-            color: #c0392b;
-            font-size: 20px;
-            letter-spacing: 6px;
-            margin: 12px 0;
+            color: #c0392b; font-size: 20px;
+            letter-spacing: 6px; margin: 12px 0;
         }
         .cover-subtitle {
-            font-size: 13px;
-            color: #666;
-            font-style: italic;
-            letter-spacing: 1px;
+            font-size: 13px; color: #666;
+            font-style: italic; letter-spacing: 1px;
         }
         .cover-imprint {
-            position: absolute;
-            bottom: 30px;
-            font-size: 10px;
-            letter-spacing: 3px;
-            color: #999;
-            text-transform: uppercase;
+            position: absolute; bottom: 30px;
+            font-size: 10px; letter-spacing: 3px;
+            color: #999; text-transform: uppercase;
         }
 
         /* Back cover */
         .back-cover {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            height: 100%;
-            padding: 40px 30px;
-            position: relative;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            text-align: center; height: 100%;
+            padding: 40px 30px; position: relative;
         }
-        .back-cover-text {
-            font-size: 11px;
-            color: #999;
-            letter-spacing: 1px;
-        }
-        .back-cover-text a {
-            color: #a78bfa;
-            text-decoration: none;
-        }
+        .back-cover-text { font-size: 11px; color: #999; letter-spacing: 1px; }
+        .back-cover-text a { color: #a78bfa; text-decoration: none; }
 
         /* Title page (interior) */
         .title-page {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            height: 100%;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            text-align: center; height: 100%;
         }
         .title-page-ornament {
-            color: #ccc;
-            font-size: 16px;
-            letter-spacing: 8px;
-            margin: 16px 0;
+            color: #ccc; font-size: 16px;
+            letter-spacing: 8px; margin: 16px 0;
         }
         .title-page-title {
-            font-size: 24px;
-            font-weight: 600;
-            color: #2a2522;
-            line-height: 1.3;
-            margin-bottom: 8px;
+            font-size: 24px; font-weight: 600; color: #2a2522;
+            line-height: 1.3; margin-bottom: 8px;
         }
         .title-page-subtitle {
-            font-size: 13px;
-            color: #999;
-            font-style: italic;
+            font-size: 13px; color: #999; font-style: italic;
         }
 
-        /* Chapter content */
-        .chapter-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #2a2522;
-            margin-bottom: 20px;
-            text-align: center;
-            padding-top: 40px;
-            letter-spacing: 0.5px;
-            font-variant: small-caps;
-        }
-        .chapter-text {
+        /* ===== CHAPTER CONTENT (typeset by Paged.js) ===== */
+        .chapter-content {
+            flex: 1;
+            overflow: hidden;
+            font-family: 'EB Garamond', Georgia, serif;
             font-size: 13.5px;
-            line-height: 1.5;
+            line-height: 1.65;
             color: #2a2522;
             text-align: justify;
             hyphens: auto;
-            flex: 1;
+            -webkit-hyphens: auto;
             orphans: 2;
             widows: 2;
-            overflow: hidden;
-            margin-bottom: 8px;
         }
-        .chapter-text p {
+        .chapter-content h1 {
+            font-size: 18px; font-weight: 600;
+            color: #2a2522; text-align: center;
+            padding-top: 40px; margin-bottom: 20px;
+            letter-spacing: 0.5px; font-variant: small-caps;
+            line-height: 1.4;
+        }
+        .chapter-content p {
             text-indent: 1.5em;
-            margin-bottom: 0;
+            margin: 0 0 2px 0;
         }
-        .chapter-text p:first-child {
+        .chapter-content h1 + p {
             text-indent: 0;
         }
-        .chapter-text p.first-para::first-letter {
+        /* Drop cap on first paragraph after chapter title */
+        .chapter-content h1 + p::first-letter {
             float: left;
-            font-size: 3.2em;
-            line-height: 0.8;
-            padding-right: 4px;
-            padding-top: 4px;
+            font-size: 3.4em;
+            line-height: 0.78;
+            padding-right: 6px;
+            padding-top: 5px;
             color: #2a2522;
             font-weight: 600;
         }
-        .chapter-text .scene-break {
+        .chapter-content .scene-break {
             text-align: center;
             text-indent: 0;
-            padding: 8px 0;
+            padding: 10px 0;
             color: #999;
             letter-spacing: 6px;
         }
 
         /* Page number */
         .page-number {
-            font-size: 11px;
-            color: #bbb;
-            font-style: italic;
-            margin-top: auto;
-            padding-top: 16px;
-            flex-shrink: 0;
+            font-size: 10.5px; color: #bbb;
+            font-style: italic; margin-top: auto;
+            padding-top: 12px; flex-shrink: 0;
         }
         .page-number.left { text-align: left; }
         .page-number.right { text-align: right; }
 
-        /* Toolbar */
-        .toolbar {
-            position: fixed;
-            top: 16px;
-            right: 16px;
-            display: flex;
-            gap: 8px;
-            z-index: 1000;
-        }
-        .toolbar-btn {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border: 1px solid rgba(255,255,255,0.15);
-            background: rgba(255,255,255,0.08);
-            color: #bbb;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            transition: all 0.2s ease;
-            backdrop-filter: blur(8px);
-        }
-        .toolbar-btn:hover {
-            background: rgba(255,255,255,0.15);
-            color: white;
-        }
-        .toolbar-btn.active {
-            background: rgba(167, 139, 250, 0.3);
-            color: #a78bfa;
+        /* ===== SPINE SHADOW ===== */
+        .book-spine-shadow {
+            position: absolute; top: 0; bottom: 0;
+            left: 50%; transform: translateX(-50%);
+            width: 60px;
+            background: linear-gradient(to right,
+                rgba(0,0,0,0.22) 0%, rgba(0,0,0,0.10) 15%,
+                rgba(0,0,0,0) 30%, rgba(0,0,0,0.04) 50%,
+                rgba(0,0,0,0) 70%, rgba(0,0,0,0.10) 85%,
+                rgba(0,0,0,0.22) 100%
+            );
+            z-index: 100; pointer-events: none;
         }
 
-        /* Navigation */
+        /* StPageFlip overrides */
+        .stf__parent {
+            box-shadow: 0 12px 60px rgba(0,0,0,0.6);
+            border-radius: 2px;
+        }
+        .stf__parent .stf__item,
+        .stf__parent .--soft,
+        .stf__parent .--hard {
+            background: #faf6f0;
+        }
+
+        /* ===== TOOLBAR ===== */
+        .toolbar {
+            position: fixed; top: 16px; right: 16px;
+            display: flex; gap: 8px; z-index: 1000;
+        }
+        .toolbar-btn {
+            width: 36px; height: 36px; border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.08);
+            color: #bbb; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px; transition: all 0.2s ease;
+            backdrop-filter: blur(8px);
+        }
+        .toolbar-btn:hover { background: rgba(255,255,255,0.15); color: white; }
+        .toolbar-btn.active { background: rgba(167,139,250,0.3); color: #a78bfa; }
+
+        /* ===== NAVIGATION ===== */
         .nav-bar {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 24px;
-            margin-top: 20px;
+            display: flex; align-items: center; justify-content: center;
+            gap: 24px; margin-top: 20px;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
         .nav-btn {
@@ -292,107 +284,45 @@
             border: 1px solid rgba(255,255,255,0.15);
             border-radius: 8px;
             background: rgba(255,255,255,0.05);
-            color: #bbb;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-family: inherit;
+            color: #bbb; font-size: 13px; cursor: pointer;
+            transition: all 0.2s ease; font-family: inherit;
             backdrop-filter: blur(4px);
         }
-        .nav-btn:hover {
-            background: rgba(255,255,255,0.1);
-            color: white;
-        }
-        .nav-btn:disabled {
-            opacity: 0.2;
-            cursor: default;
-        }
-        .nav-info {
-            color: #777;
-            font-size: 12px;
-            min-width: 80px;
-            text-align: center;
-        }
+        .nav-btn:hover { background: rgba(255,255,255,0.1); color: white; }
+        .nav-btn:disabled { opacity: 0.2; cursor: default; }
+        .nav-info { color: #777; font-size: 12px; min-width: 80px; text-align: center; }
 
         /* Progress bar */
         .progress-bar-container {
-            width: 100%;
-            max-width: 500px;
-            height: 3px;
+            width: 100%; max-width: 500px; height: 3px;
             background: rgba(255,255,255,0.1);
-            border-radius: 2px;
-            margin-top: 12px;
-            overflow: hidden;
+            border-radius: 2px; margin-top: 12px; overflow: hidden;
         }
         .progress-bar-fill {
-            height: 100%;
-            background: #a78bfa;
-            border-radius: 2px;
-            transition: width 0.3s ease;
+            height: 100%; background: #a78bfa;
+            border-radius: 2px; transition: width 0.3s ease;
         }
 
         /* Banner */
         .banner {
             margin-top: 16px;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            font-size: 11px;
-            color: #555;
+            font-size: 11px; color: #555;
         }
-        .banner a {
-            color: #a78bfa;
-            text-decoration: none;
-        }
+        .banner a { color: #a78bfa; text-decoration: none; }
         .banner a:hover { text-decoration: underline; }
 
         /* Share toast */
         .share-toast {
-            position: fixed;
-            bottom: -50px;
-            left: 50%;
+            position: fixed; bottom: -50px; left: 50%;
             transform: translateX(-50%);
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 10px 24px;
-            border-radius: 8px;
+            background: rgba(0,0,0,0.8); color: white;
+            padding: 10px 24px; border-radius: 8px;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            font-size: 13px;
-            z-index: 2000;
-            transition: bottom 0.3s ease;
-            backdrop-filter: blur(8px);
+            font-size: 13px; z-index: 2000;
+            transition: bottom 0.3s ease; backdrop-filter: blur(8px);
         }
-        .share-toast.visible {
-            bottom: 24px;
-        }
-
-        /* StPageFlip overrides */
-        .stf__parent {
-            box-shadow: 0 10px 60px rgba(0,0,0,0.5);
-        }
-        /* Book spine shadow (overlay div, outside clip-path) */
-        .book-spine-shadow {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 50px;
-            background: linear-gradient(to right,
-                rgba(0,0,0,0.18) 0%,
-                rgba(0,0,0,0.08) 20%,
-                rgba(0,0,0,0) 35%,
-                rgba(0,0,0,0.03) 50%,
-                rgba(0,0,0,0) 65%,
-                rgba(0,0,0,0.08) 80%,
-                rgba(0,0,0,0.18) 100%
-            );
-            z-index: 100;
-            pointer-events: none;
-        }
-        .stf__parent .stf__item,
-        .stf__parent .--soft,
-        .stf__parent .--hard {
-            background: #faf6f0;
-        }
+        .share-toast.visible { bottom: 24px; }
     </style>
 </head>
 <body>
@@ -400,9 +330,13 @@
 <div class="loading" id="loading">
     <div class="loading-spinner"></div>
     Loading your book preview...
+    <div class="loading-step" id="loading-step"></div>
 </div>
 
 <div class="error" id="error" style="display:none;"></div>
+
+<!-- Paged.js renders here (off-screen) -->
+<div id="paged-render"></div>
 
 <div id="book-container">
     <div id="book"></div>
@@ -431,49 +365,103 @@
 
 <script>
 var pageFlip = null;
-var pages = [];
+var bookPages = [];
 var soundEnabled = true;
-var MAX_CHARS_PER_PAGE = 650;
 
-// Page turn sound — pre-rendered WAV (brown noise swoosh)
-var pageSoundData = 'data:audio/wav;base64,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2f/i/+7/8v/j/9H/2P/h/9r/1v/K/9H/yf/Y/9b/0v/K/9P/3v/b/+f/5//j/+X/3f/W/9L/2//k//L/+f8BAAAABwD7//D/7f/o/+r/8v/6/+7////t/97/0v/j/+H/0v/J/7v/rP+q/77/xP/G/8//1P/l//L/9//1/+v/8f/8//X/5P/o/+r/4P/V/8b/vv+u/6P/uP/D/8D/vv/C/8X/z//A/7T/rv+8/8z/yP/a/9P/2P/O/9//4v/a/9j/y/++/7j/yv/W/+f/9P8AAAEACAAYABoAIgAqADkANgA0ADUAJAAVAAYACgAbACAAFgAPAB8AHgANABgADwAAAAYAEQACABEAEAAKABcADwAeACMAMAAvACMAKgA2ACoAHwAWABoADgAAAA4AFAAYABwAJAAkABQAEwAWABYAJQAxADwAOgBIAFQASwBAAEEAMQA5ADcANwA1ADEANQAqADgAPQA6AD8ALQAjACUAHgAhABgAGQAQAA8AEgANAA0AAwAKAAUAEAAJAAAA9P/3/+7/4v/c/9T/0//R/8f/1//N/9j/z//Q/+H/7P/t//X//v/4//r//P/5////8v/8//v////+//n/9f/3/wMA/f/u/+P/7//+//T/9//8//L/+//3//z//P8CAA4ACgADAAcA/f/z//3/+P/8////CAD8//L/6v/m/+D/2v/f/9n/2f/k/+H/5P/z//H/6P/a/+L/6P/1//v/7//m/9v/z//c/97/0f/P/9j/zf/I/7//xf/S/87/yP/D/8j/v//K/77/xf/Q/83/zf/c/97/2f/Y/+b/7f/k/+f/7P/w//L/8//4//L/7//w//n/+P/0/+7/6f/b/+X/7//s/+v/3v/r//j/9//q/+n/5P/d/9D/zv/N/9D/zv/G/87/zf/L/8b/xf+//8j/1f/e/+T/3//m/+//7f/3/+//6v/u//L/7P/w/+j/3P/R/9P/zP/C/77/xf/N/8f/v//B/77/u//F/9P/0//c/9n/4//v/+T/7P/h/+H/2v/k/+3/9v/s//T/7v/1//T/+v/v/+7/9f/2/wIAAQAGAAEA/f8AAPX/AAAAAPv//v/3/wAACQACAPn//P/4//D/6//i/+r/3v/T/9z/3P/f/93/1P/M/8P/yP/U/+H/5f/b/+D/5f/t/+X/3//r//P/+v8AAAAA+P/9//r/8f/7//v/+v/1//r/8v/r/+j/7v/p//L//P/+//P/7P/n/+L/4P/V/9n/1//R/8f/0f/Y/9P/2f/e/+D/3v/g/+D/4v/m/+L/5v/e/9//1v/f/9f/4f/b/9v/0//W/9//4//l/+r/5f/j/+b/3f/n/+H/4v/s/+P/6v/h/+P/7v/s/+r/7//3//L/6P/f/9v/5v/x/+j/7v/v/+n/6v/l/+j/4v/o/+f/3//j/+D/4P/l/+7/5//h/9//3P/W/+L/4f/f/9z/5//k/+L/6f/o/+3/8P/y/+z/8v/8//f/AAAAAP7/AgAMAA4ADgAYABMADgAIAA8ABQAMAA8ACgALAAwAFQANAAMAAAD5//b/+P/z//r/8f/w//n//v8CAAgAAQAHAAsADAAVABYAEQAWABcADQAEAAkABgAMAAoAEgAZABIAFQAXAAwAEQAPAAoAAQABAPv/+//2/+3/8v/w//D/8v/y/+3/6f/o/+H/2v/c/9T/0//M/83/1P/O/8j/yv/L/9D/y//P/9X/0f/J/9D/zv/Y/9H/1f/V/9P/0f/U/8z/yf/U/9f/4v/i/9z/1P/b/9b/1f/b/+P/3P/U/97/5//v//X/7P/x/+r/6f/h/9z/3v/Z/9r/1//X/93/1//c/9T/1v/a/9P/zv/L/9L/1f/O/9L/yv/J/8b/zv/T/9v/0//b/97/2v/Z/+P/3P/a/+H/4//e/9//3//o/9//3P/d/9v/2v/V/9P/0f/V/9H/2//c/+P/5v/t//X/+//y//T/8P/q//L/9f/u/+z/9f/3//r/9f/x/+v/9P/8//n/+v/1/+//8P/1//z/+f/9//3/9/8AAAcAAQAIAA8ADAAMABQADQAJABAAEwAXAB0AGwAZABcAHgAkACoAJgApACIAGwAfACAAGwAcABYAEQAUABEAFAATABMAFAAXABQAGgAZABIADAAEAAkAAAD9//z/AAAHAAsABAALABMAGAAXABQAEwAOAAwABAAIAAYAAwAEAAgACQAKABAAFAAUABIAFwAPABcAFgAUABcAGAAXABkAEQANAAsACAANAAwACgAMAAQABQAAAAQAAwAHAAAABQALAA4ACAAHAAYAAAACAAUAAAAAAP3/AAAFAAoADQAHAAAAAAD+/////f8BAAEACAAGAAQACAAOAA4AEQALABAACwAOAAwACQANAAwADQAHAAEA/v8AAPz/+/8AAAEA+v8AAPz//v/9//z/9v/4//T/9f/3//j//f/3//L/9P/u//P/9v/7//n////4//f/8//2//j/+//8/wAA/P/7//3/AgD9//r/+P/3//H/8P/x/+//6v/t/+r/6//s//D/8v/s//D/8//6//r//f8CAAkABgAHAAQABAALAAkAAwAEAAQABgAGAAEAAwAGAAwABQD//wAA+/8AAAQACgAJAAYABwAJAAIA///8/wAA/f/9//v/9P/3//X/+f/6//T/8P/u/+z/7//1//r//P/8//3/AgACAAAABAADAAYACgAHAAoABwAIAAMABgAKAA8ADAASAA8ACAAOABAAFAAUABIAEwAXABoAHAAZABIAEAAQAAwACwARAA0ACgAEAAgACwAQAA8ACQAIAAgABAAJAAwADAAPAAoADwASABgAGQAUABYAFQAXABcAEAAVABcAGAASABEACwALAAwACgAKAAgADAAKAAYAAwAAAAAA/P/4//X/7//x//L/7//t/+v/6P/r/+n/5v/h/+T/4v/i/9//3//i/97/2f/a/9f/2f/b/+D/4//l/+T/6P/s/+7/7//1//n/+P/0//j//v/9//3///8BAAAA/v/7////AAAEAAMABQAHAAoADwAOAAgABwAFAAUAAQAEAAUAAAD9/wAAAwABAAMABgAGAAUABAAFAAUACwAJAAcACgALAA4ADQAQABAADQAOAAkADgAOAA4ADgAOAA4AEQANABIADAAIAAsADgAMAAwADQAIAAwAEAAUABUADwAKAAYABgAFAAYAAgAEAAIAAwAHAAUACgAJAA4ADAAHAAEABgAFAAEAAAD+////+v/8/wAA//8BAAUAAgAEAAMAAQAAAAAAAAABAAEA/v/9/wEABAAAAAYABwADAAAA+v/9//3//P8BAP3////+//7/AAABAAAA/v/+//7//v/8//n/+//8/////f/9//z//P/7/wAAAAACAP////8AAP3/AAAEAAgACwAKAAYACgAFAAUABwAMAAcACAALAAkABAACAAUABQAFAAQABgAFAAoADQAKAAUACQAMAA4ADgAJAAkABQAAAAUACAAJAAcAAwADAAYABAAAAP//AQD9//r/9//4//X/9P/4//b/+P/4//v////9//n/9v/7//f/+P/9/////f/8//7/+//9//z//f8AAPz/+f/4//f/+f/8//z/+//9//3/+v/+//n//f/9////AgAEAAAAAwAEAAkACAALAA4ADAAKAAYABwAGAAgACgAMAA0ACgAIAAkABgAHAAgACwAGAAIAAAD///3/+//4//T/8f/1//f/+v/+////AAD+/wAA/v///wIAAgAHAAoACwAJAAgADAANABAADgANABAAEgAQAA0ACQALAAkACAAEAAgABQAFAAQACAAJAAYABgACAAUAAgADAAcACAAFAAEAAQAAAAAAAgAAAAAABAAFAAMABQAIAAgACAAMAAwACwANAA8AEQARAA0AEAASABIAEgAVABMAFAATABQAFwATABMAFgASABEAEwAUABAADAALAAgACQAMAA0ADAAIAAkACwAHAAUABgAHAAcAAwADAAEAAgAEAAQACAAEAAAAAgAAAP3///8AAAAAAQAEAAEAAQAFAAEA//8AAAAAAgAAAAAA/v/8//j/9//6//n/9//4//v/+P/4//r/+P/7//v//f8AAAEAAAAEAAQAAQAEAAYACAAIAAcABAABAAAAAgACAAEABQABAP//AQABAAQAAAAAAP3/+//4//n//P/8//7/AAABAP//AAAAAAAAAgADAAAA/v/+/wEAAQADAAIAAAD+//v/+//4//j/+v/6//j/+v/8//r/+P/7//z/AAD///3//v/7//z/+//7//r//P/+//v//f8AAP3/AAD///3/AAAAAAEAAAD+/wAA//8AAP///f/+/wAAAAD+//7//v8AAP7/AAAAAAAA/v///wAAAwAAAP//AAD9//v//f/9//v/+v/9//7/AAAAAAAA//8BAAQAAQADAAMABgAHAAkABwAJAAoACAAHAAcACQAKAAcABwAEAAcABAADAAUAAgACAAIABAAGAAUAAwAEAAAAAgAFAAIAAQACAAAAAAD//wAAAQADAAAAAAABAAQAAwAFAAQAAwAEAAYAAwAGAAUAAQABAAAAAgACAAQABgADAAYABwAEAAcACAAKAAcABgAHAAYAAwAEAAEAAgAAAAMAAQAAAAAAAgACAAUAAwAEAAMAAgAAAAEAAAD+//3//f/9//v//P/+//7//f/+/wAAAQADAAYAAwAFAAUAAgAFAAMABgADAAIAAwADAAUABQAGAAQABwAHAAUABAADAAQAAwAAAAIAAAADAAQAAwACAAMAAgACAAMABQAFAAQAAQADAAEAAAAAAAIABAABAAAAAAD//wAAAgAAAAMABQAGAAcABAADAAAAAAD+//3/+//7//n/+P/3//f/9//1//X/9//3//f/9f/2//X/8v/0//f/9v/4//j/9//6//z//f/7//z//v/+////AAABAAAAAAAAAP//AAAAAP7//P/9//3//P////3/+//7//v//P/6//r/+f/4//n/+//+//3/+//9//3//P/7//r//f////3//v/+/wAAAQAAAAIABAAEAAYABAAEAAIAAAAAAAIABAACAAQABgADAAMABQAEAAQABQAHAAQAAwACAAIAAAABAAMAAgACAAIAAAD+//3///8AAAAAAQADAAIAAgADAAEAAAD//wEAAAAAAAAAAQACAAMAAwAEAAIAAgACAAQAAgAAAAAAAQAAAP7//f/9/////v/9//3/AAAAAAAAAAD+//////8AAAIAAgABAAIAAwABAAEAAwAAAAEAAAAAAAAAAQAAAP7//f/8//7//v8AAAAAAAAAAAEAAAAAAP7///8AAAAAAAAAAAAAAgACAAQAAwAEAAEAAwABAAMAAQAAAP///f/8//3//v/8//3////9//v//P/9//v/+f/4//b/9//5//r//P/7//3//P/7//n/+//9///////9//3//v/9//7//P/8//r/+f/4//f/+f/6//z/+v/5//n/+v/6//v/+v/9//v/+//6//n/+P/3//n/+P/2//X/9v/3//j/9v/2//T/9P/0//T/9v/2//f/9v/4//f/9f/3//f/+P/3//n/+f/4//j/+f/3//b/9v/2//X/9//5//j/+v/5//r//P/7//z//f/9//7//v/9//7/////////////////////////AAD//wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD////////+//7/////////////////////////AAD/////AAD///////////////8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAEAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD//wAAAAAAAP//AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/////////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAABAAEAAAABAAEAAQAAAAAAAAAAAAAAAAAAAP//AAAAAAAAAAD///////////7//v///////////////v/+//7//f/9//7//v///////////wAA//////7//v/+//7//v/+//7//v/+//7//v/+//7//v/9//7//v/+//7//f/9//7//v////7///////////////7////+//7//v/+/////v/+///////+/////v/+//7///////////8AAP///////////v/+/////v/+/////////////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////////////////AAD//wAA/////wAAAAD//////v/+//7//v/+//7//f/9//3//f/+//7//v/9//3//f/+//3//v/+//7//v/+//7//v/+//////8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//8AAP///////wAAAAAAAAAAAAAAAP///////////v///////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAQABAAEAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA///////////////////////////+/////////////////////////wAAAAAAAAAA//////////////////8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAQABAAEAAQAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==';
+// Page dimensions — Pocket format (4.25in x 6.87in)
+var PAGE_W = 380;
+var PAGE_H = 615;
+
+// Page turn sound
+var pageSoundData = 'data:audio/wav;base64,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';
 var pageSound = new Audio(pageSoundData);
 function playPageSound() {
+    if (!soundEnabled) return;
     pageSound.currentTime = 0;
     pageSound.play().catch(function() {});
 }
 
+// ===== PAGED.JS CSS for pagination =====
+var PAGED_CSS = '\
+@page {\
+  size: ' + PAGE_W + 'px ' + PAGE_H + 'px;\
+  margin: 48px 38px 58px 48px;\
+}\
+@page :right {\
+  margin: 48px 48px 58px 38px;\
+}\
+@page :left {\
+  margin: 48px 38px 58px 48px;\
+}\
+h1 {\
+  break-before: right;\
+  page-break-before: right;\
+  font-family: "EB Garamond", Georgia, serif;\
+  font-size: 18px;\
+  font-weight: 600;\
+  text-align: center;\
+  font-variant: small-caps;\
+  letter-spacing: 0.5px;\
+  padding-top: 40px;\
+  margin-bottom: 20px;\
+  line-height: 1.4;\
+  color: #2a2522;\
+}\
+p {\
+  font-family: "EB Garamond", Georgia, serif;\
+  font-size: 13.5px;\
+  line-height: 1.65;\
+  text-align: justify;\
+  text-indent: 1.5em;\
+  margin: 0 0 2px 0;\
+  color: #2a2522;\
+  hyphens: auto;\
+  -webkit-hyphens: auto;\
+  orphans: 2;\
+  widows: 2;\
+}\
+h1 + p {\
+  text-indent: 0;\
+}\
+p.scene-break {\
+  text-align: center;\
+  text-indent: 0;\
+  padding: 10px 0;\
+  color: #999;\
+  letter-spacing: 6px;\
+}\
+';
+
+// ===== INIT =====
 function init() {
     var params = new URLSearchParams(window.location.search);
     var token = params.get('t');
+    if (!token) { showError('No preview token provided.'); return; }
 
-    if (!token) {
-        showError('No preview token provided.');
-        return;
-    }
-
+    setStep('Fetching manuscript...');
     var apiBase = getApiBase();
+
     fetch(apiBase + '/api/preview/view/' + token)
         .then(function(res) {
             if (!res.ok) throw new Error('Preview not found');
             return res.json();
         })
         .then(function(data) {
-            if (data.content) {
-                var content = typeof data.content === 'string' ? JSON.parse(data.content) : data.content;
-                buildPages(content);
-                createBook();
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('book-container').classList.add('visible');
-                document.getElementById('nav-bar').style.display = 'flex';
-                document.getElementById('toolbar').style.display = 'flex';
-                document.getElementById('progress-bar').style.display = 'block';
-                document.getElementById('banner').style.display = 'block';
-            } else {
-                showError('This preview is no longer available.');
-            }
+            if (!data.content) throw new Error('Empty content');
+            var content = typeof data.content === 'string' ? JSON.parse(data.content) : data.content;
+            setStep('Typesetting pages...');
+            return paginateWithPagedJS(content);
         })
-        .catch(function() {
+        .then(function() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('book-container').classList.add('visible');
+            document.getElementById('nav-bar').style.display = 'flex';
+            document.getElementById('toolbar').style.display = 'flex';
+            document.getElementById('progress-bar').style.display = 'block';
+            document.getElementById('banner').style.display = 'block';
+        })
+        .catch(function(err) {
+            console.error(err);
             showError('Could not load preview. The link may have expired.');
         });
 }
@@ -485,129 +473,213 @@ function getApiBase() {
     return 'https://novel-editor-server.onrender.com';
 }
 
-function buildPages(content) {
-    var title = content.title || 'Untitled';
+function setStep(text) {
+    document.getElementById('loading-step').textContent = text;
+}
 
-    // Cover page (hard)
-    pages.push({ type: 'cover', title: title, hard: true });
-
-    // Blank + Title page
-    pages.push({ type: 'blank' });
-    pages.push({ type: 'title', title: title });
-
-    // Chapter pages
+// ===== BUILD SEMANTIC HTML FROM JSON =====
+function buildContentHTML(content) {
+    var html = '';
     if (content.chapters) {
         for (var i = 0; i < content.chapters.length; i++) {
-            var chapter = content.chapters[i];
-            var fullText = chapter.content.join('\n');
-            var chunks = splitIntoPages(fullText, MAX_CHARS_PER_PAGE);
-            for (var j = 0; j < chunks.length; j++) {
-                pages.push({
-                    type: 'chapter',
-                    title: j === 0 ? chapter.title : null,
-                    text: chunks[j],
-                    isFirstPage: j === 0
-                });
+            var ch = content.chapters[i];
+            html += '<h1>' + escapeHtml(ch.title || 'Chapter ' + (i + 1)) + '</h1>';
+            if (ch.content) {
+                for (var j = 0; j < ch.content.length; j++) {
+                    var para = ch.content[j].trim();
+                    if (!para) continue;
+                    if (/^[\*\-]{3,}$/.test(para) || para === '***' || para === '---') {
+                        html += '<p class="scene-break">&middot; &middot; &middot;</p>';
+                    } else {
+                        html += '<p>' + escapeHtml(para) + '</p>';
+                    }
+                }
+            }
+        }
+    }
+    return html;
+}
+
+// ===== PAGINATE WITH PAGED.JS =====
+async function paginateWithPagedJS(content) {
+    var title = content.title || 'Untitled';
+    var contentHTML = buildContentHTML(content);
+
+    // Set up render target
+    var renderTarget = document.getElementById('paged-render');
+    renderTarget.innerHTML = contentHTML;
+
+    // Create style element for Paged.js
+    var styleEl = document.createElement('style');
+    styleEl.textContent = PAGED_CSS;
+    document.head.appendChild(styleEl);
+
+    // Run Paged.js Previewer
+    var Previewer = (window.Paged && window.Paged.Previewer) || window.PagedPolyfill;
+    var paged;
+
+    if (Previewer && Previewer.prototype) {
+        paged = new Previewer();
+    } else if (window.PagedPolyfill && window.PagedPolyfill.preview) {
+        // Direct polyfill mode
+        await window.PagedPolyfill.preview();
+        afterPagedRendered(title, renderTarget);
+        document.head.removeChild(styleEl);
+        return;
+    }
+
+    if (paged) {
+        await paged.preview(renderTarget.innerHTML, [PAGED_CSS], renderTarget);
+        afterPagedRendered(title, renderTarget);
+        document.head.removeChild(styleEl);
+        return;
+    }
+
+    // Fallback: if Paged.js didn't load, use manual pagination
+    console.warn('Paged.js not available, using fallback pagination');
+    document.head.removeChild(styleEl);
+    fallbackPaginate(content, title);
+}
+
+function afterPagedRendered(title, renderTarget) {
+    setStep('Assembling book...');
+
+    var pagedPages = renderTarget.querySelectorAll('.pagedjs_page');
+    bookPages = [];
+
+    // Cover (hard)
+    bookPages.push({ type: 'cover', title: title, hard: true });
+    // Blank + Title page
+    bookPages.push({ type: 'blank' });
+    bookPages.push({ type: 'title', title: title });
+
+    // Content pages from Paged.js
+    for (var i = 0; i < pagedPages.length; i++) {
+        var pageContent = pagedPages[i].querySelector('.pagedjs_page_content');
+        var html = pageContent ? pageContent.innerHTML : '';
+        // Clean up Paged.js artifacts
+        html = html.replace(/data-[\w-]+="[^"]*"/g, '');
+        bookPages.push({ type: 'chapter', html: html, pageNum: i + 1 });
+    }
+
+    // Ensure even page count + back cover
+    if (bookPages.length % 2 !== 0) {
+        bookPages.push({ type: 'blank' });
+    }
+    bookPages.push({ type: 'back', hard: true });
+
+    // Clean up render target
+    renderTarget.innerHTML = '';
+
+    createBook();
+}
+
+// ===== FALLBACK PAGINATION (if Paged.js fails) =====
+function fallbackPaginate(content, title) {
+    setStep('Assembling book...');
+    bookPages = [];
+
+    bookPages.push({ type: 'cover', title: title, hard: true });
+    bookPages.push({ type: 'blank' });
+    bookPages.push({ type: 'title', title: title });
+
+    // Measure-and-split approach
+    var measurer = document.createElement('div');
+    measurer.style.cssText = 'position:absolute;left:-9999px;visibility:hidden;' +
+        'width:' + (PAGE_W - 86) + 'px;height:' + (PAGE_H - 106) + 'px;' +
+        'font-family:"EB Garamond",Georgia,serif;font-size:13.5px;line-height:1.65;' +
+        'text-align:justify;hyphens:auto;overflow:hidden;padding:0;';
+    document.body.appendChild(measurer);
+
+    if (content.chapters) {
+        for (var i = 0; i < content.chapters.length; i++) {
+            var ch = content.chapters[i];
+            var chapterHTML = '<h1 style="font-size:18px;font-weight:600;text-align:center;font-variant:small-caps;padding-top:40px;margin-bottom:20px;">' +
+                escapeHtml(ch.title || 'Chapter ' + (i + 1)) + '</h1>';
+            var paragraphs = ch.content || [];
+            var currentHTML = chapterHTML;
+            var isFirstPage = true;
+
+            for (var j = 0; j < paragraphs.length; j++) {
+                var para = paragraphs[j].trim();
+                if (!para) continue;
+                var pHTML;
+                if (/^[\*\-]{3,}$/.test(para) || para === '***' || para === '---') {
+                    pHTML = '<p style="text-align:center;text-indent:0;padding:10px 0;color:#999;letter-spacing:6px;">&middot; &middot; &middot;</p>';
+                } else {
+                    pHTML = '<p style="text-indent:1.5em;margin:0 0 2px 0;">' + escapeHtml(para) + '</p>';
+                }
+
+                measurer.innerHTML = currentHTML + pHTML;
+                if (measurer.scrollHeight > measurer.clientHeight && currentHTML !== chapterHTML) {
+                    bookPages.push({ type: 'chapter', html: currentHTML, pageNum: bookPages.length - 2 });
+                    currentHTML = pHTML;
+                    isFirstPage = false;
+                } else {
+                    currentHTML += pHTML;
+                }
+            }
+            if (currentHTML) {
+                bookPages.push({ type: 'chapter', html: currentHTML, pageNum: bookPages.length - 2 });
             }
         }
     }
 
-    // Ensure even number + back cover
-    if (pages.length % 2 !== 0) {
-        pages.push({ type: 'blank' });
-    }
-    pages.push({ type: 'back', hard: true });
+    document.body.removeChild(measurer);
+
+    if (bookPages.length % 2 !== 0) bookPages.push({ type: 'blank' });
+    bookPages.push({ type: 'back', hard: true });
+
+    createBook();
 }
 
-function splitIntoPages(text, maxChars) {
-    if (text.length <= maxChars) return [text];
-    var chunks = [];
-    var paragraphs = text.split('\n');
-    var current = '';
-    for (var i = 0; i < paragraphs.length; i++) {
-        var p = paragraphs[i];
-        if (current.length + p.length + 1 > maxChars && current.length > 0) {
-            chunks.push(current);
-            current = p;
-        } else {
-            current += (current ? '\n' : '') + p;
-        }
-    }
-    if (current) chunks.push(current);
-    return chunks;
-}
-
-function renderPage(page, pageIndex) {
+// ===== RENDER PAGES & CREATE BOOK =====
+function renderPage(page, index) {
     var div = document.createElement('div');
-    div.className = 'page' + (page.hard ? ' hard' : '');
+    var isRecto = (index % 2 === 1); // odd pages are recto (right)
+    div.className = 'page' + (page.hard ? ' hard' : '') + (isRecto ? ' page-recto' : ' page-verso');
 
     if (page.type === 'cover') {
         div.innerHTML =
             '<div class="cover-page">' +
-            '<div class="cover-border"></div>' +
-            '<div class="cover-border-inner"></div>' +
+            '<div class="cover-border"></div><div class="cover-border-inner"></div>' +
             '<div class="cover-author">&nbsp;</div>' +
             '<div class="cover-ornament">&#8212;</div>' +
             '<div class="cover-title">' + escapeHtml(page.title) + '</div>' +
             '<div class="cover-ornament">&#8212;</div>' +
             '<div class="cover-subtitle">A Novel</div>' +
-            '<div class="cover-imprint">NOVEL EDITOR</div>' +
-            '</div>';
+            '<div class="cover-imprint">NOVEL EDITOR</div></div>';
     } else if (page.type === 'back') {
         div.innerHTML =
-            '<div class="back-cover">' +
-            '<div class="cover-border"></div>' +
-            '<div class="cover-border-inner"></div>' +
-            '<div class="back-cover-text">Made with <a href="https://noveleditor.app" target="_blank">Novel Editor</a></div>' +
-            '</div>';
+            '<div class="back-cover"><div class="cover-border"></div><div class="cover-border-inner"></div>' +
+            '<div class="back-cover-text">Made with <a href="https://noveleditor.app" target="_blank">Novel Editor</a></div></div>';
     } else if (page.type === 'title') {
         div.innerHTML =
             '<div class="page-inner"><div class="title-page">' +
             '<div class="title-page-ornament">&#10045; &#10045; &#10045;</div>' +
             '<div class="title-page-title">' + escapeHtml(page.title) + '</div>' +
             '<div class="title-page-ornament">&#8212;</div>' +
-            '<div class="title-page-subtitle">A Novel</div>' +
-            '</div></div>';
+            '<div class="title-page-subtitle">A Novel</div></div></div>';
     } else if (page.type === 'blank') {
         div.innerHTML = '<div class="page-inner"></div>';
     } else {
-        var html = '<div class="page-inner">';
-        if (page.title) {
-            html += '<div class="chapter-title">' + escapeHtml(page.title) + '</div>';
-        }
-        html += '<div class="chapter-text">';
-        var paragraphs = page.text.split('\n');
-        for (var i = 0; i < paragraphs.length; i++) {
-            var p = paragraphs[i].trim();
-            if (!p) continue;
-            // Scene break detection
-            if (/^[\*\-]{3,}$/.test(p) || p === '***' || p === '---') {
-                html += '<p class="scene-break">&middot; &middot; &middot;</p>';
-            } else {
-                var cls = (page.isFirstPage && i === 0) ? ' class="first-para"' : '';
-                html += '<p' + cls + '>' + escapeHtml(p) + '</p>';
-            }
-        }
-        html += '</div>';
-
-        // Page numbers (not on cover/title/first chapter page)
-        if (!page.title) {
-            var side = (pageIndex % 2 === 0) ? 'left' : 'right';
-            html += '<div class="page-number ' + side + '">' + (pageIndex) + '</div>';
-        }
-
-        html += '</div>';
-        div.innerHTML = html;
+        // Chapter content page
+        var side = isRecto ? 'right' : 'left';
+        var innerClass = 'page-inner' + (isRecto ? ' recto' : '');
+        div.innerHTML =
+            '<div class="' + innerClass + '">' +
+            '<div class="chapter-content">' + page.html + '</div>' +
+            '<div class="page-number ' + side + '">' + page.pageNum + '</div>' +
+            '</div>';
     }
-
     return div;
 }
 
 function createBook() {
     var container = document.getElementById('book');
     var isMobile = window.innerWidth < 600;
-    var pageWidth = isMobile ? Math.min(window.innerWidth - 40, 340) : 340;
-    var pageHeight = isMobile ? Math.round(pageWidth * 1.47) : 500;
+    var pageWidth = isMobile ? Math.min(window.innerWidth - 40, PAGE_W) : PAGE_W;
+    var pageHeight = isMobile ? Math.round(pageWidth * (PAGE_H / PAGE_W)) : PAGE_H;
 
     pageFlip = new St.PageFlip(container, {
         width: pageWidth,
@@ -622,32 +694,26 @@ function createBook() {
         disableFlipByClick: false
     });
 
-    // Build DOM pages
     var domPages = [];
-    for (var i = 0; i < pages.length; i++) {
-        domPages.push(renderPage(pages[i], i));
+    for (var i = 0; i < bookPages.length; i++) {
+        domPages.push(renderPage(bookPages[i], i));
     }
-
     pageFlip.loadFromHTML(domPages);
 
-    // Events — sound on flip START, nav update on flip END
     pageFlip.on('changeState', function(e) {
-        if (e.data === 'flipping' && soundEnabled) {
-            try { playPageSound(); } catch(err) {}
-        }
+        if (e.data === 'flipping') playPageSound();
     });
-    pageFlip.on('flip', function(e) {
-        updateNav();
-    });
+    pageFlip.on('flip', function() { updateNav(); });
 
     updateNav();
 
-    // Add spine shadow overlay on top of the book
+    // Spine shadow
     var spine = document.createElement('div');
     spine.className = 'book-spine-shadow';
     document.getElementById('book-container').appendChild(spine);
 }
 
+// ===== UI FUNCTIONS =====
 function updateNav() {
     if (!pageFlip) return;
     var current = pageFlip.getCurrentPageIndex();
@@ -655,19 +721,12 @@ function updateNav() {
     document.getElementById('nav-info').textContent = (current + 1) + ' / ' + total;
     document.getElementById('btn-prev').disabled = (current === 0);
     document.getElementById('btn-next').disabled = (current >= total - 1);
-
-    // Progress bar
-    var progress = total > 1 ? ((current) / (total - 1)) * 100 : 0;
+    var progress = total > 1 ? (current / (total - 1)) * 100 : 0;
     document.getElementById('progress-fill').style.width = progress + '%';
 }
 
-function flipNext() {
-    if (pageFlip) pageFlip.flipNext();
-}
-
-function flipPrev() {
-    if (pageFlip) pageFlip.flipPrev();
-}
+function flipNext() { if (pageFlip) pageFlip.flipNext(); }
+function flipPrev() { if (pageFlip) pageFlip.flipPrev(); }
 
 function toggleSound() {
     soundEnabled = !soundEnabled;
@@ -684,18 +743,6 @@ function toggleFullscreen() {
     }
 }
 
-function escapeHtml(str) {
-    if (!str) return '';
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function showError(msg) {
-    document.getElementById('loading').style.display = 'none';
-    var el = document.getElementById('error');
-    el.textContent = msg;
-    el.style.display = 'block';
-}
-
 function shareLink() {
     var url = window.location.href;
     if (navigator.share) {
@@ -709,14 +756,24 @@ function shareLink() {
     }
 }
 
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function showError(msg) {
+    document.getElementById('loading').style.display = 'none';
+    var el = document.getElementById('error');
+    el.textContent = msg;
+    el.style.display = 'block';
+}
+
 // Keyboard navigation
 document.addEventListener('keydown', function(e) {
     if (e.key === 'ArrowRight' || e.key === ' ') {
-        e.preventDefault();
-        flipNext();
+        e.preventDefault(); flipNext();
     } else if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        flipPrev();
+        e.preventDefault(); flipPrev();
     }
 });
 
